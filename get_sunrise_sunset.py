@@ -3,8 +3,8 @@ from datetime import date, timedelta
 import json
 
 # Define your location's latitude and longitude
-latitude = "52.077463"
-longitude = "-0.054215"
+latitude = "52.07"
+longitude = "-0.05"
 
 # Start date and end date
 start_date = date.today()
