@@ -1,93 +1,66 @@
-import json
-from datetime import datetime, timedelta
 import time
 import subprocess
-import os  # Import the os module for directory creation
+import os
+from PIL import Image, ImageDraw, ImageFont
 
-# Load sunrise and sunset data from your JSON file
-with open("/home/icrucrob/picam/sunrise_sunset_data.json", "r") as json_file:
-    sunrise_sunset_data = json.load(json_file)
+# Define the interval for photos in seconds (e.g., 20 minutes)
+photo_interval = 1 * 60  # 20 minutes * 60 seconds/minute
 
-# Define your location
-latitude = "52.5200"
-longitude = "13.4050"
+# Define the output folder
+output_folder = "/home/icrucrob/picam/high_street"
 
-# Define absolute paths for output folders
-output_folder_hourly = "/home/icrucrob/picam/hourly/"
-output_folder_sunrise = "/home/icrucrob/picam/sunrise/"
-output_folder_sunset = "/home/icrucrob/picam/sunset/"
-
-# Function to calculate time until the next event
-def time_until_next_event(event_time):
-    now = datetime.now()
-    event_datetime = datetime.combine(now.date(), datetime.strptime(event_time, "%I:%M:%S %p").time())
-    
-    # If the event time is in the past, add one day
-    if now > event_datetime:
-        event_datetime += timedelta(days=1)
-    
-    time_difference = event_datetime - now
-    return time_difference.total_seconds()
-
-# Function to capture a photo
-def capture_photo(output_folder):
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+# Function to capture a photo and add a timestamp
+def capture_photo():
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
     file_name = f"photo_{timestamp}.jpg"
-    subprocess.run(["libcamera-jpeg", "-o", f"{output_folder}/{file_name}"])
+    file_path = os.path.join(output_folder, file_name)
+    subprocess.run(["libcamera-jpeg", "-o", file_path])
+
+    # Open the captured photo using Pillow
+    img = Image.open(file_path)
+    draw = ImageDraw.Draw(img)
+    
+    # Define timestamp text and font properties
+    text = time.strftime("%Y-%m-%d %H:%M:%S")
+    font_size = 60
+    font_color = (255, 0, 0)  # Red
+    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"  # Replace with the path to your TrueType font file
+
+    # Create a font object with the specified font size
+    font = ImageFont.truetype(font_path, font_size)
+
+    # Calculate the text size and position (bottom right corner)
+    text_width, text_height = draw.textsize(text, font=font)
+    img_width, img_height = img.size
+    text_x = img_width - text_width - 10
+    text_y = img_height - text_height - 10
+
+    # Add the timestamp to the photo
+    draw.text((text_x, text_y), text, font=font, fill=font_color)
+    
+    # Save the modified photo
+    img.save(file_path)
+
+# Create the output folder if it doesn't exist
+os.makedirs(output_folder, exist_ok=True)
 
 try:
+    # Capture an initial photo
+    capture_photo()
+    print("Initial photo captured.")
+
     while True:
-        now = datetime.now()
-        today_date = now.strftime("%Y-%m-%d")
-        
-        # Calculate time until the next hourly event
-        remaining_seconds_hourly = 3600 - (now.minute * 60 + now.second)
+        # Sleep for the specified photo interval
+        time.sleep(photo_interval)
 
-        # Calculate time until sunrise - 15 minutes
-        sunrise_time = sunrise_sunset_data[today_date].get("sunrise")
-        if sunrise_time:
-            sunrise_minus_15 = (datetime.strptime(sunrise_time, "%I:%M:%S %p") - timedelta(minutes=15)).strftime("%I:%M:%S %p")
-            remaining_seconds_sunrise_minus_15 = time_until_next_event(sunrise_minus_15)
-        else:
-            remaining_seconds_sunrise_minus_15 = float('inf')
+        # Capture the next photo
+        capture_photo()
+        print("Photo captured.")
 
-        # Calculate time until sunset + 15 minutes
-        sunset_time = sunrise_sunset_data[today_date].get("sunset")
-        if sunset_time:
-            sunset_plus_15 = (datetime.strptime(sunset_time, "%I:%M:%S %p") + timedelta(minutes=15)).strftime("%I:%M:%S %p")
-            remaining_seconds_sunset_plus_15 = time_until_next_event(sunset_plus_15)
-        else:
-            remaining_seconds_sunset_plus_15 = float('inf')
-        
-        # Determine the next event and sleep accordingly
-        min_remaining_seconds = min(remaining_seconds_hourly, remaining_seconds_sunrise_minus_15, remaining_seconds_sunset_plus_15)
-        
-        if min_remaining_seconds == remaining_seconds_hourly:
-            capture_photo(output_folder_hourly)
-            print(f"Hourly photo captured at {now.strftime('%H:%M:%S')}")
-        elif min_remaining_seconds == remaining_seconds_sunrise_minus_15:
-            capture_photo(output_folder_sunrise)
-            print(f"Sunrise - 15 minutes photo captured at {now.strftime('%H:%M:%S')}")
-        elif min_remaining_seconds == remaining_seconds_sunset_plus_15:
-            capture_photo(output_folder_sunset)
-            print(f"Sunset + 15 minutes photo captured at {now.strftime('%H:%M:%S')}")
-        
-        # Sleep until the next event
-        print(f"Sleeping until {now + timedelta(seconds=min_remaining_seconds)} ({min_remaining_seconds} seconds)")
-        time.sleep(min_remaining_seconds)
-        
 except KeyboardInterrupt:
     pass
 except Exception as e:
-    # Catch and log exceptions
-    error_message = "Exception: " + str(e)
-    print(error_message)  # Optional: Print the error to the console
-    # log_error(error_message)  # You can log errors to a file if needed
+    # Handle exceptions as needed
+    print(f"Exception: {str(e)}")
 else:
-    # Log a success message with timestamp
-    success_message = "Code execution completed successfully at {}".format(datetime.now().isoformat())
-    print(success_message)  # Optional: Print the success message to the console
-    # log_message(success_message)  # You can log success messages to a file if needed
-
-# Close the log file when done
-# sys.stderr.close()  # Commented out as it's not needed for basic functionality
+    print("Code execution completed successfully.")
