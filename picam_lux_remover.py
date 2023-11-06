@@ -20,28 +20,31 @@ for filename in os.listdir(source_folder):
         # Get the full path of the image file.
         file_path = os.path.join(source_folder, filename)
 
-        # Open the image using Pillow.
+        # Open the image using Pillow with error handling.
         try:
             img = Image.open(file_path)
         except Exception as e:
             print(f"Error opening {filename}: {str(e)}")
             continue
 
-        # Calculate the average luminance of the image.
-        stat = ImageStat.Stat(img)
-        luminance = stat.mean[0]
+        # Try to calculate the average luminance of the image with error handling.
+        try:
+            stat = ImageStat.Stat(img)
+            luminance = stat.mean[0]
 
-        # Check if the average luminance is below the threshold.
-        if luminance < luminance_threshold:
-            # Move the image to the night folder.
-            destination_path = os.path.join(night_folder, filename)
-            try:
-                os.rename(file_path, destination_path)
-                print(f"Moved {filename} to {night_folder}")
-            except Exception as e:
-                print(f"Error moving {filename}: {str(e)}")
-        else:
-            print(f"{filename} is not a night photo (Luminance: {luminance})")
+            # Check if the average luminance is below the threshold.
+            if luminance < luminance_threshold:
+                # Move the image to the night folder.
+                destination_path = os.path.join(night_folder, filename)
+                try:
+                    os.rename(file_path, destination_path)
+                    print(f"Moved {filename} to {night_folder}")
+                except Exception as e:
+                    print(f"Error moving {filename}: {str(e)}")
+            else:
+                print(f"{filename} is not a night photo (Luminance: {luminance})")
+        except Exception as e:
+            print(f"Error processing {filename}: {str(e)}")
 
 # Print a message when the script completes.
 print("Processing complete.")

@@ -17,7 +17,7 @@ output_file = f"output/my_video_{timestamp}.mp4"
 # Build and run the ffmpeg command
 ffmpeg_cmd = [
     "ffmpeg",
-    "-framerate", "60",
+    "-framerate", "24",
     "-i", os.path.join(image_dir, "%*.jpg"),
     "-c:v", "libx264",
     "-pix_fmt", "yuv420p",
