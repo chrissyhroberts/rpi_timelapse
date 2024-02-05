@@ -4,7 +4,7 @@ import getpass
 
 # Remote server details
 remote_user = "icrucrob"
-remote_host = "192.168.86.25"
+remote_host = "192.168.86.32"
 remote_dir = "/home/icrucrob/picam/garden/"
 
 # Local download directory
